@@ -1,261 +1,92 @@
-"""
-Support for interface with a Sony Remote.
-
-For more details about this platform, please refer to the documentation at
-https://github.com/dilruacs/media_player.sony
-"""
+"""Support for Sony Remote via Legacy API."""
 from __future__ import annotations
 
+import asyncio
 import logging
-import time
-from typing import Iterable, Any
+from typing import Any, Iterable
 
 from homeassistant.components.remote import (
     ATTR_DELAY_SECS,
-    ATTR_HOLD_SECS,
     ATTR_NUM_REPEATS,
     DEFAULT_DELAY_SECS,
-    DEFAULT_HOLD_SECS,
     DEFAULT_NUM_REPEATS,
     RemoteEntity,
-    RemoteEntityFeature, ENTITY_ID_FORMAT)
+    RemoteEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    STATE_OFF, STATE_ON)
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import STATE_OFF, STATE_ON
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import SonyCoordinator
-from .const import DOMAIN, SONY_COORDINATOR, DEFAULT_DEVICE_NAME
+from .const import DOMAIN, SONY_COORDINATOR
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Use to setup entity."""
-    _LOGGER.debug("Sony async_add_entities remote")
+    """Set up the Sony Remote entity from a config entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id][SONY_COORDINATOR]
-    async_add_entities(
-        [SonyRemoteEntity(coordinator)]
-    )
+    async_add_entities([SonyRemoteEntity(coordinator, config_entry)])
 
 
-# pylint: disable=unused-argument
-# def setup_platform(hass, config, add_devices, discovery_info=None):
-#     """Set up the Sony Remote platform."""
-#     host = config.get(CONF_HOST)
-#
-#     if host is None:
-#         return
-#
-#     pin = None
-#     sony_config = load_json(hass.config.path(SONY_CONFIG_FILE))
-#     logger = logging.getLogger('sonyapilib.device')
-#     logger.setLevel(logging.CRITICAL)
-#     while sony_config:
-#         # Set up a configured TV
-#         host_ip, host_config = sony_config.popitem()
-#         if host_ip == host:
-#             device = SonyDevice.load_from_json(host_config)
-#             hass_device = SonyRemoteEntity(device)
-#             add_devices([hass_device])
-#             return
-#
-#     setup_sonyremote(config, pin, hass, add_devices)
-#
-#
-# def setup_sonyremote(config, sony_device, hass, add_devices):
-#     """Set up a Sony Media Player based on host parameter."""
-#     host = config.get(CONF_HOST)
-#     broadcast = config.get(CONF_BROADCAST_ADDRESS)
-#
-#     if sony_device is None:
-#         request_configuration(config, hass, add_devices)
-#     else:
-#         # If we came here and configuring this host, mark as done
-#         if host in _CONFIGURING:
-#             request_id = _CONFIGURING.pop(host)
-#             configurator = hass.components.configurator
-#             configurator.request_done(request_id)
-#             _LOGGER.info("Discovery configuration done")
-#
-#         if broadcast:
-#             sony_device.broadcast = broadcast
-#
-#         hass_device = SonyRemoteEntity(sony_device)
-#         config[host] = hass_device.sonydevice.save_to_json()
-#
-#         # Save config, we need the mac address to support wake on LAN
-#         save_json(hass.config.path(SONY_CONFIG_FILE), config)
-#
-#         add_devices([hass_device])
-#
-#
-# def request_configuration(config, hass, add_devices):
-#     """Request configuration steps from the user."""
-#     host = config.get(CONF_HOST)
-#     name = config.get(CONF_NAME)
-#     app_port = config.get(CONF_APP_PORT)
-#     dmr_port = config.get(CONF_DMR_PORT)
-#     ircc_port = config.get(CONF_IRCC_PORT)
-#     psk = None
-#
-#     configurator = hass.components.configurator
-#
-#     # We got an error if this method is called while we are configuring
-#     if host in _CONFIGURING:
-#         configurator.notify_errors(
-#             _CONFIGURING[host], "Failed to register, please try again.")
-#         return
-#
-#     def sony_configuration_callback(data):
-#         """Handle the entry of user PIN."""
-#         from sonyapilib.device import AuthenticationResult
-#
-#         pin = data.get('pin')
-#         sony_device = SonyDevice(host, name,
-#                                  psk=psk, app_port=app_port,
-#                                  dmr_port=dmr_port, ircc_port=ircc_port)
-#
-#         authenticated = False
-#
-#         # make sure we only send the authentication to the device
-#         # if we have a valid pin
-#         if pin == '0000' or pin is None or pin == '':
-#             register_result = sony_device.register()
-#             if register_result == AuthenticationResult.SUCCESS:
-#                 authenticated = True
-#             elif register_result == AuthenticationResult.PIN_NEEDED:
-#                 # return so next call has the correct pin
-#                 return
-#             else:
-#                 _LOGGER.error("An unknown error occured during registration")
-#
-#         authenticated = sony_device.send_authentication(pin)
-#         if authenticated:
-#             setup_sonyremote(config, sony_device, hass, add_devices)
-#         else:
-#             request_configuration(config, hass, add_devices)
-#
-#     _CONFIGURING[host] = configurator.request_config(
-#         name, sony_configuration_callback,
-#         description='Enter the Pin shown on your Sony Device. '
-#         'If no Pin is shown, enter 0000 '
-#         'to let the device show you a Pin.',
-#         description_image="/static/images/smart-tv.png",
-#         submit_caption="Confirm",
-#         fields=[{'id': 'pin', 'name': 'Enter the pin', 'type': ''}]
-#     )
+class SonyRemoteEntity(CoordinatorEntity, RemoteEntity):
+    """Representation of a Sony Remote Control."""
 
-
-class SonyRemoteEntity(CoordinatorEntity[SonyCoordinator], RemoteEntity):
-    # pylint: disable=too-many-instance-attributes
-    """Representation of a Sony mediaplayer."""
+    _attr_has_entity_name = True
+    _attr_name = "Remote"
+    _attr_icon = "mdi:remote-tv"
     _attr_supported_features = RemoteEntityFeature.ACTIVITY
 
-    def __init__(self, coordinator):
-        """
-        Initialize the Sony remote device.
-
-        Mac address is optional but neccessary for wake on LAN
-        """
+    def __init__(self, coordinator: Any, config_entry: ConfigEntry) -> None:
+        """Initialize the Sony remote."""
         super().__init__(coordinator)
-        self.coordinator = coordinator
-        self._name = f"{DEFAULT_DEVICE_NAME} Remote"
-        # self._attr_name = f"{self.coordinator.api.name} Remote"
-        self._attr_icon = "mdi:remote-tv"
-        self._attr_native_value = "OFF"
-        self._state = STATE_OFF
-        self._muted = False
-        self._id = None
-        self._playing = False
-        self._unique_id = ENTITY_ID_FORMAT.format(
-            f"{self.coordinator.api.host}_Remote")
-
-        try:
-            self.update()
-        except Exception:  # pylint: disable=broad-except
-            self._state = STATE_OFF
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                # Mac address is unique identifiers within a specific domain
-                (DOMAIN, self.coordinator.api.mac)
-            },
-            name=self.coordinator.api.nickname,
+        self._attr_unique_id = f"{config_entry.entry_id}_remote"
+        
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, getattr(coordinator.api, "mac", config_entry.entry_id))},
+            name=getattr(coordinator.api, "nickname", "Sony Device"),
             manufacturer="Sony",
-            model=self.coordinator.api.client_id
+            model=coordinator.data.get("model", "Sony Media Player"),
         )
 
     @property
-    def unique_id(self) -> str | None:
-        return self._unique_id
+    def is_on(self) -> bool:
+        """Return true if device is on."""
+        return self.coordinator.data.get("state") != STATE_OFF
 
-    def update(self):
-        """Update TV info."""
-        _LOGGER.debug("Sony media player update %s", self.coordinator.data)
-        self._state = self.coordinator.data.get("state", None)
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the device on."""
+        await self.hass.async_add_executor_job(self.coordinator.api.power, True)
+        await self.coordinator.async_request_refresh()
 
-    @property
-    def name(self):
-        """Return the name of the device."""
-        return self.coordinator.api.nickname
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the device off."""
+        await self.hass.async_add_executor_job(self.coordinator.api.power, False)
+        await self.coordinator.async_request_refresh()
 
-    @property
-    def state(self):
-        """Return the state of the device."""
-        return self._state
+    async def async_toggle(self, **kwargs: Any) -> None:
+        """Toggle the power of the device."""
+        current_state = self.coordinator.data.get("state")
+        new_state = current_state == STATE_OFF
+        await self.hass.async_add_executor_job(self.coordinator.api.power, new_state)
+        await self.coordinator.async_request_refresh()
 
-    @property
-    def supported_features(self):
-        """Flag media player features that are supported."""
-        return self._attr_supported_features
-
-    def turn_on(self):
-        """Turn the media player on."""
-        self.coordinator.api.power(True)
-
-    def turn_off(self):
-        """Turn off media player."""
-        self.coordinator.api.power(False)
-
-    def toggle(self, activity: str = None, **kwargs):
-        """Toggle a device."""
-        if self._state == STATE_ON:
-            self.turn_off()
-        else:
-            self.turn_on()
-
-    def send_command(self, command: Iterable[str], **kwargs: Any) -> None:
-        """Send commands to one device."""
+    async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
+        """Send IRCC commands to the Sony device."""
         num_repeats = kwargs.get(ATTR_NUM_REPEATS, DEFAULT_NUM_REPEATS)
         delay_secs = kwargs.get(ATTR_DELAY_SECS, DEFAULT_DELAY_SECS)
-        hold_secs = kwargs.get(ATTR_HOLD_SECS, DEFAULT_HOLD_SECS)
-
-        _LOGGER.debug("async_send_command %s %d repeats %d delay", ''.join(list(command)), num_repeats, delay_secs)
 
         for _ in range(num_repeats):
             for single_command in command:
-                # Not supported : hold and release modes
-                # if hold_secs > 0:
-                #     self.sonydevice._send_command(single_command)
-                #     time.sleep(hold_secs)
-                # else:
-                self.coordinator.api._send_command(single_command)
-                time.sleep(delay_secs)
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        # Update only if activity changed
-        self.update()
-        self.async_write_ha_state()
-        return super()._handle_coordinator_update()
+                _LOGGER.debug("Sending command %s to Sony device", single_command)
+                # We use executor_job because _send_command is a blocking HTTP call
+                await self.hass.async_add_executor_job(
+                    self.coordinator.api._send_command, single_command
+                )
+                if delay_secs > 0:
+                    await asyncio.sleep(delay_secs)
