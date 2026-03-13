@@ -4,21 +4,26 @@
       "already_configured": "L'appareil est déjà configuré"
     },
     "error": {
-      "cannot_connect": "Echec de la connexion",
+      "cannot_connect": "Échec de la connexion",
       "invalid_auth": "Authentification incorrecte",
-      "unknown": "Erreur inconnue"
+      "unknown": "Erreur inattendue"
     },
     "step": {
       "user": {
         "data": {
-          "host": "Hôte"
-        }
+          "host": "Hôte (Adresse IP)",
+          "pin": "Code PIN",
+          "app_port": "Port App",
+          "dmr_port": "Port DMR",
+          "ircc_port": "Port IRCC"
+        },
+        "description": "Entrez les détails de votre appareil Sony. Si un code PIN es requis, il apparaîtra sur l'écran."
       },
       "zeroconf_confirm": {
         "data": {
           "host": "Hôte"
         },
-        "title": "Sony media"
+        "title": "Appareil Sony"
       }
     }
   },

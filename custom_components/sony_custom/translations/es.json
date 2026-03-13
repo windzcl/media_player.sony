@@ -1,0 +1,39 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "El dispositivo ya está configurado"
+    },
+    "error": {
+      "cannot_connect": "Error al conectar con el dispositivo",
+      "invalid_auth": "Autenticación inválida",
+      "unknown": "Error inesperado"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "host": "Dirección IP (Host)",
+          "pin": "Código PIN",
+          "app_port": "Puerto de la App",
+          "dmr_port": "Puerto DMR",
+          "ircc_port": "Puerto IRCC"
+        },
+        "description": "Ingresa los detalles de tu dispositivo Sony. Si se requiere un PIN, aparecerá en la pantalla del equipo."
+      },
+      "zeroconf_confirm": {
+        "data": {
+          "host": "Host"
+        },
+        "title": "Dispositivo Sony"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "host": "Host"
+        }
+      }
+    }
+  }
+}

@@ -11,18 +11,19 @@
     "step": {
       "user": {
         "data": {
-          "host": "Host",
+          "host": "Host (IP Address)",
           "pin": "PIN code",
-          "app_port" : "App port",
-          "dmr_port" : "DMR port",
-          "ircc_port" : "IRCC port"
-        }
+          "app_port": "App port",
+          "dmr_port": "DMR port",
+          "ircc_port": "IRCC port"
+        },
+        "description": "Enter your Sony device details. If a PIN is required, it will appear on the device screen."
       },
       "zeroconf_confirm": {
         "data": {
           "host": "Host"
         },
-        "title": "Sony media"
+        "title": "Sony Media Device"
       }
     }
   },

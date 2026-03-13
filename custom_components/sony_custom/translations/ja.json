@@ -1,0 +1,39 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "デバイスはすでに設定されています"
+    },
+    "error": {
+      "cannot_connect": "接続に失敗しました",
+      "invalid_auth": "認証が無効です",
+      "unknown": "予期しないエラーが発生しました"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "host": "ホスト (IPアドレス)",
+          "pin": "PINコード",
+          "app_port": "アプリポート",
+          "dmr_port": "DMRポート",
+          "ircc_port": "IRCCポート"
+        },
+        "description": "Sonyデバイスの詳細を入力してください。PINが必要な場合は、デバイスの画面に表示されます。"
+      },
+      "zeroconf_confirm": {
+        "data": {
+          "host": "ホスト"
+        },
+        "title": "Sonyメディアデバイス"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "host": "ホスト"
+        }
+      }
+    }
+  }
+}
